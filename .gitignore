@@ -1,0 +1,20 @@
+# backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+backend/ml/model.pkl
+
+# frontend
+frontend/node_modules/
+frontend/dist/
+
+# data
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# os/editor
+.DS_Store
+.vscode/
