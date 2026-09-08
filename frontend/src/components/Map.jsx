@@ -5,7 +5,7 @@ import {
   Popup,
   ZoomControl,
 } from "react-leaflet";
-
+import { getHotspots } from "../services/api";
 import "leaflet/dist/leaflet.css";
 
 const hotspots = [
