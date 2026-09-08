@@ -1,0 +1,28 @@
+feature,group,meaning,format
+frp,Core,FIRMS fire radiative power,numeric
+confidence,Core,"FIRMS confidence encoded n=0, l=1, h=2",numeric
+historical_count,Core,Historical FIRMS detections in the same grid cell,numeric
+historical_frp_mean,Core,Historical mean FRP in the same grid cell,numeric
+historical_frp_max,Core,Historical maximum FRP in the same grid cell,numeric
+persistence_days,Core,Number of historical active days,numeric
+industrial_distance,Core,Nearest queried industrial OSM feature distance in metres,numeric / NaN
+residential_distance,Core,Nearest queried residential OSM feature distance in metres,numeric / NaN
+road_distance,Core,Road distance; not collected in Notebook 03,numeric / NaN
+frp_zscore,Additional,Recent FRP anomaly relative to historical FRP standard deviation,numeric / NaN
+persistence_ratio,Additional,Historical active-days divided by observed span,numeric
+has_baseline,Additional,Whether the grid cell had historical baseline data,0/1
+bright_ti4,Additional,VIIRS brightness temperature channel 4,numeric
+bright_ti5,Additional,VIIRS brightness temperature channel 5,numeric
+brightness_difference,Additional,bright_ti4 minus bright_ti5,numeric
+scan,Additional,FIRMS scan value,numeric
+track,Additional,FIRMS track value,numeric
+is_night,Additional,Day/night indicator derived from FIRMS daynight,0/1
+hour,Additional,Acquisition hour,numeric
+day_of_week,Additional,"Acquisition weekday, Monday=0",numeric
+near_industrial,Additional,OSM industrial context within query radius,0/1
+near_agriculture,Additional,OSM agricultural context within query radius,0/1
+near_forest,Additional,OSM forest/wood context within query radius,0/1
+near_residential,Additional,OSM residential context within query radius,0/1
+near_commercial,Additional,OSM commercial context within query radius,0/1
+osm_queried,Additional,Whether this cell was included in the OSM query set,0/1
+label,Target,Manual class assigned by team,0/1/2
