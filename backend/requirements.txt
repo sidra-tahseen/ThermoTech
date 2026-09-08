@@ -10,6 +10,10 @@ sqlalchemy==2.0.35
 psycopg2-binary==2.9.9
 
 # Phase 5 — ML classification
+# shap 0.46 breaks at import time under numpy 2.x (TypeError in its colour
+# conversion code), so numpy is pinned below 2 to match it. Lift both together
+# or neither.
+numpy<2
 scikit-learn==1.5.2
 xgboost==2.1.1
 shap==0.46.0
