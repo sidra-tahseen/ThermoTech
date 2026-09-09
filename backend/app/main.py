@@ -67,10 +67,12 @@ def hotspots(limit: int = 861):
     """
     if not UNLABELED_CSV.exists():
         return JSONResponse(
-            {"error": f"Processed dataset not found at {UNLABELED_CSV}"}, status_code=503
+            {"error": f"Processed dataset not found at {UNLABELED_CSV}"},
+            status_code=503,
         )
 
     df = pd.read_csv(UNLABELED_CSV)
+
     if limit < len(df):
         df = df.iloc[:: max(1, len(df) // limit)].head(limit)
     df = df.reset_index(drop=True)
@@ -78,29 +80,176 @@ def hotspots(limit: int = 861):
     results = classify(df)
 
     extras = [
-        "frp", "confidence", "historical_count", "historical_frp_mean",
-        "historical_frp_max", "persistence_days", "persistence_ratio",
-        "frp_zscore", "has_baseline", "is_night", "osm_queried",
-        "near_industrial", "industrial_distance",
+        "frp",
+        "confidence",
+        "historical_count",
+        "historical_frp_mean",
+        "historical_frp_max",
+        "persistence_days",
+        "persistence_ratio",
+        "frp_zscore",
+        "has_baseline",
+        "is_night",
+        "osm_queried",
+        "near_industrial",
+        "industrial_distance",
     ]
     for i, r in enumerate(results):
         row = df.iloc[i]
         r["raw"] = {
             c: (None if pd.isna(row.get(c)) else _py(row.get(c)))
-            for c in extras if c in df.columns
+            for c in extras
+            if c in df.columns
         }
 
     counts = {name: 0 for name in CLASS_NAMES.values()}
     for r in results:
         counts[r["classification"]] += 1
 
-    return {"model": model_info(), "counts": counts, "total": len(results), "hotspots": results}
+    return {
+        "model": model_info(),
+        "counts": counts,
+        "total": len(results),
+        "hotspots": results,
+    }
 
 
 @app.post("/classify")
 def classify_endpoint(records: list[dict]):
     """Classify arbitrary hotspot records. Schema: backend/ml/API_CONTRACT.md."""
     return {"model": model_info(), "results": classify(records)}
+
+
+@app.get("/statistics")
+def get_statistics():
+    if not UNLABELED_CSV.exists():
+        raise HTTPException(
+            status_code=503, detail=f"Processed dataset not found: {UNLABELED_CSV}"
+        )
+
+    df = pd.read_csv(UNLABELED_CSV)
+
+    # Classify all available FIRMS records
+    results = classify(df)
+
+    # Count classifications
+    classification_counts = {}
+
+    for result in results:
+        classification = result.get("classification", "UNKNOWN")
+        classification_counts[classification] = (
+            classification_counts.get(classification, 0) + 1
+        )
+
+    # FRP statistics
+    frp_values = pd.to_numeric(df["frp"], errors="coerce").dropna()
+
+    statistics = {
+        "total_records": len(results),
+        "classification_counts": classification_counts,
+        "frp": {
+            "available_records": int(len(frp_values)),
+            "average": float(frp_values.mean()) if len(frp_values) else None,
+            "maximum": float(frp_values.max()) if len(frp_values) else None,
+        },
+    }
+
+    return {
+        "model": model_info(),
+        "statistics": statistics,
+    }
+
+
+@app.get("/trends")
+def get_trends():
+    if not UNLABELED_CSV.exists():
+        raise HTTPException(
+            status_code=503, detail=f"Processed dataset not found: {UNLABELED_CSV}"
+        )
+
+    df = pd.read_csv(UNLABELED_CSV)
+
+    # Convert acquisition time to datetime
+    df["acq_datetime"] = pd.to_datetime(df["acq_datetime"], errors="coerce")
+
+    # Remove records without a valid date
+    df = df.dropna(subset=["acq_datetime"]).copy()
+
+    # Convert FRP to numeric
+    df["frp"] = pd.to_numeric(df["frp"], errors="coerce")
+
+    # Daily hotspot activity
+    daily = (
+        df.groupby(df["acq_datetime"].dt.date)
+        .agg(
+            hotspot_count=("acq_datetime", "size"),
+            total_frp=("frp", "sum"),
+            average_frp=("frp", "mean"),
+        )
+        .reset_index()
+    )
+
+    # Hourly hotspot activity
+    hourly = (
+        df.groupby(df["acq_datetime"].dt.hour)
+        .agg(hotspot_count=("acq_datetime", "size"), total_frp=("frp", "sum"))
+        .reset_index()
+    )
+
+    return {
+        "total_records": len(df),
+        "daily": [
+            {
+                "date": str(row["acq_datetime"]),
+                "hotspot_count": int(row["hotspot_count"]),
+                "total_frp": (
+                    float(row["total_frp"]) if pd.notna(row["total_frp"]) else 0
+                ),
+                "average_frp": (
+                    float(row["average_frp"]) if pd.notna(row["average_frp"]) else None
+                ),
+            }
+            for _, row in daily.iterrows()
+        ],
+        "hourly": [
+            {
+                "hour": int(row["acq_datetime"]),
+                "hotspot_count": int(row["hotspot_count"]),
+                "total_frp": (
+                    float(row["total_frp"]) if pd.notna(row["total_frp"]) else 0
+                ),
+            }
+            for _, row in hourly.iterrows()
+        ],
+    }
+
+
+@app.get("/critical-event")
+def get_critical_event():
+    if not UNLABELED_CSV.exists():
+        raise HTTPException(
+            status_code=503, detail=f"Processed dataset not found: {UNLABELED_CSV}"
+        )
+
+    df = pd.read_csv(UNLABELED_CSV)
+
+    # Classify all available FIRMS records
+    results = classify(df)
+
+    if not results:
+        return {"critical_event": None, "message": "No hotspot records available"}
+
+    # Find the event with the highest FRP
+    def get_frp(result):
+        try:
+            value = result.get("frp")
+            return float(value) if value is not None else -1
+        except (TypeError, ValueError):
+            return -1
+
+    critical = max(results, key=get_frp)
+
+    return {"critical_event": critical}
 
 
 def _py(v):
