@@ -1,35 +1,53 @@
-const cards = [
-  {
-    label: "TRACKED HOTSPOTS",
-    value: "1,428",
-    change: "+12%",
-    icon: "◉",
-    type: "normal",
-  },
-  {
-    label: "HIGH-RISK ANOMALIES",
-    value: "23",
-    change: "NDRF ALERT ACTIVE",
-    icon: "⚠",
-    type: "danger",
-  },
-  {
-    label: "PERSISTENT THERMAL SOURCES",
-    value: "312",
-    change: "BASELINE MATCHED",
-    icon: "▣",
-    type: "warning",
-  },
-  {
-    label: "ABNORMAL SURGES",
-    value: "47",
-    change: ">120 MW",
-    icon: "↗",
-    type: "danger",
-  },
-];
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 function KPICards() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    axios
+      .get("/api/hotspots")
+      .then((response) => {
+        setData(response.data);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch hotspot data:", error);
+      });
+  }, []);
+
+  const counts = data?.counts || {};
+
+  const cards = [
+    {
+      label: "TRACKED HOTSPOTS",
+      value: data?.total ?? "—",
+      change: "COLLECTED DATA",
+      icon: "◉",
+      type: "normal",
+    },
+    {
+      label: "HIGH-RISK ANOMALIES",
+      value: counts["NEW_ABNORMAL_EVENT"] ?? "—",
+      change: "NEW ABNORMAL EVENTS",
+      icon: "⚠",
+      type: "danger",
+    },
+    {
+      label: "PERSISTENT THERMAL SOURCES",
+      value: counts["PERSISTENT_SOURCE"] ?? "—",
+      change: "BASELINE MATCHED",
+      icon: "▣",
+      type: "warning",
+    },
+    {
+      label: "OTHER ANOMALIES",
+      value: counts["OTHER_ANOMALY"] ?? "—",
+      change: "OTHER CLASSIFIED EVENTS",
+      icon: "↗",
+      type: "danger",
+    },
+  ];
+
   return (
     <section className="kpi-grid">
       {cards.map((card) => (

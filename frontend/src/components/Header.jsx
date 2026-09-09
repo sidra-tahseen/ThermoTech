@@ -14,7 +14,7 @@ function Header() {
 
       <div className="header-status">
         <span className="live-dot"></span>
-        LIVE MONITORING
+        MONITORING
       </div>
 
       <div className="sync">

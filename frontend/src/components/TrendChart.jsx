@@ -1,4 +1,67 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+
 function TrendChart() {
+  const [hotspots, setHotspots] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios
+      .get("/api/hotspots")
+      .then((response) => {
+        setHotspots(response.data.hotspots || []);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch trend data:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  // Aggregate collected hotspot data by hour
+  const hourlyData = Array.from({ length: 24 }, (_, hour) => {
+    const records = hotspots.filter(
+      (item) => Number(item.raw?.hour) === hour
+    );
+
+    const frpValues = records
+      .map((item) => Number(item.raw?.frp))
+      .filter((value) => !isNaN(value));
+
+    const baselineValues = records
+      .map((item) => Number(item.raw?.historical_frp_mean))
+      .filter((value) => !isNaN(value));
+
+    const average = (values) =>
+      values.length
+        ? values.reduce((sum, value) => sum + value, 0) / values.length
+        : 0;
+
+    return {
+      hour,
+      frp: average(frpValues),
+      baseline: average(baselineValues),
+    };
+  });
+
+  const maxValue = Math.max(
+    ...hourlyData.map((item) => Math.max(item.frp, item.baseline)),
+    1
+  );
+
+  // Convert data values into SVG coordinates
+  const getPoints = (key) => {
+    return hourlyData
+      .map((item, index) => {
+        const x = (index / 23) * 700;
+        const y = 160 - (item[key] / maxValue) * 140;
+
+        return `${x},${y}`;
+      })
+      .join(" ");
+  };
+
   return (
     <section className="trend-card">
 
@@ -10,12 +73,12 @@ function TrendChart() {
           </div>
 
           <div className="trend-subtitle">
-            FRP (MW) vs 180-DAY BASELINE
+            FRP (MW) vs HISTORICAL BASELINE
           </div>
         </div>
 
         <div className="trend-live">
-          09:42 UTC • NOW
+          {loading ? "LOADING" : "COLLECTED DATA"}
         </div>
 
       </div>
@@ -23,9 +86,9 @@ function TrendChart() {
       <div className="chart">
 
         <div className="chart-grid">
-          <span>300</span>
-          <span>200</span>
-          <span>100</span>
+          <span>{Math.round(maxValue)}</span>
+          <span>{Math.round(maxValue * 0.66)}</span>
+          <span>{Math.round(maxValue * 0.33)}</span>
           <span>0</span>
         </div>
 
@@ -35,20 +98,24 @@ function TrendChart() {
           className="chart-svg"
         >
 
-          <polyline
-            points="0,145 80,138 150,142 220,130 290,134 360,120 430,115 500,108 570,112 640,90 700,35"
-            fill="none"
-            stroke="#4cd7f6"
-            strokeWidth="3"
-          />
+          {!loading && (
+            <>
+              <polyline
+                points={getPoints("frp")}
+                fill="none"
+                stroke="#4cd7f6"
+                strokeWidth="3"
+              />
 
-          <polyline
-            points="0,155 80,152 150,150 220,148 290,145 360,142 430,140 500,138 570,136 640,134 700,132"
-            fill="none"
-            stroke="#869397"
-            strokeWidth="2"
-            strokeDasharray="6 6"
-          />
+              <polyline
+                points={getPoints("baseline")}
+                fill="none"
+                stroke="#869397"
+                strokeWidth="2"
+                strokeDasharray="6 6"
+              />
+            </>
+          )}
 
         </svg>
 

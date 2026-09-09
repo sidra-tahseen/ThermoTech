@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -5,54 +6,31 @@ import {
   Popup,
   ZoomControl,
 } from "react-leaflet";
-import { getHotspots } from "../services/api";
+
+import { fetchHotspots, classColor, classLabel } from "../services/api";
 import "leaflet/dist/leaflet.css";
 
-const hotspots = [
-  {
-    id: "EVT-9402",
-    lat: 21.8472,
-    lng: 86.3219,
-    frp: 268.4,
-    type: "Wildfire",
-    risk: "HIGH",
-  },
-  {
-    id: "EVT-8110",
-    lat: 22.2604,
-    lng: 84.8536,
-    frp: 114,
-    type: "Industrial",
-    risk: "MEDIUM",
-  },
-  {
-    id: "EVT-7301",
-    lat: 21.75,
-    lng: 86.15,
-    frp: 18,
-    type: "Agricultural",
-    risk: "LOW",
-  },
-  {
-    id: "EVT-9419",
-    lat: 21.91,
-    lng: 86.42,
-    frp: 92,
-    type: "Rapid Surge",
-    risk: "HIGH",
-  },
-];
-
-function getRiskColor(risk) {
-  if (risk === "HIGH") return "#ff4d4d";
-  if (risk === "MEDIUM") return "#ffb84d";
-  return "#4cd7f6";
-}
-
 function Map() {
+  const [hotspots, setHotspots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchHotspots()
+      .then((data) => {
+        setHotspots(data.hotspots || []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch hotspots:", err);
+        setError("Unable to load hotspot data");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <section className="map-card">
-
       <div className="map-header">
         <div>
           <div className="map-title">
@@ -60,7 +38,7 @@ function Map() {
           </div>
 
           <div className="map-subtitle">
-            LIVE NASA FIRMS THERMAL DETECTIONS
+            NASA FIRMS THERMAL DETECTIONS
           </div>
         </div>
 
@@ -77,46 +55,87 @@ function Map() {
         zoomControl={false}
         className="leaflet-map"
       >
-
         <ZoomControl position="bottomright" />
 
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {hotspots.map((hotspot) => (
-          <CircleMarker
-            key={hotspot.id}
-            center={[hotspot.lat, hotspot.lng]}
-            radius={10}
-            pathOptions={{
-              color: getRiskColor(hotspot.risk),
-              fillColor: getRiskColor(hotspot.risk),
-              fillOpacity: 0.75,
-              weight: 2,
-            }}
-          >
-            <Popup>
-              <strong>{hotspot.id}</strong>
-              <br />
-              FRP: {hotspot.frp} MW
-              <br />
-              Type: {hotspot.type}
-              <br />
-              Risk: {hotspot.risk}
-            </Popup>
-          </CircleMarker>
-        ))}
+        {hotspots.map((hotspot, index) => {
+          const latitude = Number(hotspot.latitude);
+          const longitude = Number(hotspot.longitude);
+          const classification = hotspot.classification;
 
+          if (isNaN(latitude) || isNaN(longitude)) {
+            return null;
+          }
+
+          const color = classColor(classification);
+
+          return (
+            <CircleMarker
+              key={hotspot.id ?? `hotspot-${index}`}
+              center={[latitude, longitude]}
+              radius={8}
+              pathOptions={{
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.75,
+                weight: 2,
+              }}
+            >
+              <Popup>
+                <strong>
+                  {hotspot.id ?? `HOTSPOT-${index + 1}`}
+                </strong>
+
+                <br />
+
+                Location: {latitude.toFixed(4)},{" "}
+                {longitude.toFixed(4)}
+
+                <br />
+
+                Classification:{" "}
+                {classLabel(classification)}
+
+                <br />
+
+                Confidence:{" "}
+                {hotspot.confidence !== undefined
+                  ? `${(Number(hotspot.confidence) * 100).toFixed(1)}%`
+                  : "N/A"}
+
+                <br />
+
+                FRP:{" "}
+                {hotspot.raw?.frp !== undefined
+                  ? `${Number(hotspot.raw.frp).toFixed(1)} MW`
+                  : "N/A"}
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
 
       <div className="map-overlay">
-        <div>84 / 1,428 HOTSPOTS</div>
-        <div>21°45'12" N, 86°20'44" E</div>
-        <div>10 KM OSM LAND USE</div>
-      </div>
+        <div>
+          {loading
+            ? "LOADING HOTSPOTS..."
+            : `${hotspots.length} HOTSPOTS`}
+        </div>
 
+        <div>
+          {error
+            ? error
+            : "SIMILIPAL AOI"}
+        </div>
+
+        <div>
+          10 KM OSM LAND USE
+        </div>
+      </div>
     </section>
   );
 }

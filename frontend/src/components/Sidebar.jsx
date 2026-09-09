@@ -1,4 +1,24 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+
 function Sidebar() {
+  const [counts, setCounts] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios
+      .get("/api/hotspots")
+      .then((response) => {
+        setCounts(response.data.counts || {});
+      })
+      .catch((error) => {
+        console.error("Failed to fetch hotspot counts:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <aside className="sidebar">
 
@@ -52,26 +72,26 @@ function Sidebar() {
 
         <label className="filter">
           <input type="checkbox" defaultChecked />
-          Wildfire / Crown Flare
-          <span>38</span>
+          Persistent Source
+          <span>
+            {loading ? "—" : counts["PERSISTENT_SOURCE"] ?? 0}
+          </span>
         </label>
 
         <label className="filter">
           <input type="checkbox" defaultChecked />
-          Industrial Flaring
-          <span>312</span>
+          New Abnormal Event
+          <span>
+            {loading ? "—" : counts["NEW_ABNORMAL_EVENT"] ?? 0}
+          </span>
         </label>
 
         <label className="filter">
           <input type="checkbox" defaultChecked />
-          Agricultural
-          <span>1,012</span>
-        </label>
-
-        <label className="filter">
-          <input type="checkbox" defaultChecked />
-          Rapid Surge
-          <span>66</span>
+          Other Anomaly
+          <span>
+            {loading ? "—" : counts["OTHER_ANOMALY"] ?? 0}
+          </span>
         </label>
 
       </div>
