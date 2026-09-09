@@ -1,0 +1,28 @@
+# backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+backend/ml/model.pkl
+
+# ml module — generated artefacts, keep the folders
+backend/ml/models/*
+!backend/ml/models/.gitkeep
+backend/ml/reports/*
+!backend/ml/reports/.gitkeep
+backend/ml/data/training_set.csv
+
+# frontend
+frontend/node_modules/
+frontend/dist/
+
+# data
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# os/editor
+.DS_Store
+.vscode/
+.venv/
