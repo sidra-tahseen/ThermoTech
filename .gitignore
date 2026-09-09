@@ -25,3 +25,4 @@ data/processed/*
 # os/editor
 .DS_Store
 .vscode/
+.venv/

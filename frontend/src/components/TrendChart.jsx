@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 function TrendChart() {
-  const [hotspots, setHotspots] = useState([]);
+  const [trendData, setTrendData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios
-      .get("/api/hotspots")
+      .get("/api/trends")
       .then((response) => {
-        setHotspots(response.data.hotspots || []);
+        setTrendData(response.data.points || []);
       })
       .catch((error) => {
         console.error("Failed to fetch trend data:", error);
@@ -19,34 +19,22 @@ function TrendChart() {
       });
   }, []);
 
-  // Aggregate collected hotspot data by hour
   const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-    const records = hotspots.filter(
-      (item) => Number(item.raw?.hour) === hour
+    const point = trendData.find(
+      (item) => Number(item.hour) === hour
     );
-
-    const frpValues = records
-      .map((item) => Number(item.raw?.frp))
-      .filter((value) => !isNaN(value));
-
-    const baselineValues = records
-      .map((item) => Number(item.raw?.historical_frp_mean))
-      .filter((value) => !isNaN(value));
-
-    const average = (values) =>
-      values.length
-        ? values.reduce((sum, value) => sum + value, 0) / values.length
-        : 0;
 
     return {
       hour,
-      frp: average(frpValues),
-      baseline: average(baselineValues),
+      frp: point?.average_frp ?? 0,
+      baseline: point?.historical_baseline ?? 0,
     };
   });
 
   const maxValue = Math.max(
-    ...hourlyData.map((item) => Math.max(item.frp, item.baseline)),
+    ...hourlyData.map((item) =>
+      Math.max(item.frp, item.baseline)
+    ),
     1
   );
 

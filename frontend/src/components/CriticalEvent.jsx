@@ -7,15 +7,9 @@ function CriticalEvent() {
 
   useEffect(() => {
     axios
-      .get("/api/hotspots")
+      .get("/api/critical-event")
       .then((response) => {
-        const hotspots = response.data.hotspots || [];
-
-        // Pick the first classified hotspot as the priority event.
-        // Later, this can be changed to select the highest-risk event.
-        if (hotspots.length > 0) {
-          setEvent(hotspots[0]);
-        }
+        setEvent(response.data);
       })
       .catch((error) => {
         console.error("Failed to fetch critical event:", error);
@@ -47,59 +41,54 @@ function CriticalEvent() {
         </div>
 
         <h2>NO EVENT AVAILABLE</h2>
-        <p>No classified hotspot data was returned.</p>
+        <p>No critical event data was returned.</p>
       </aside>
     );
   }
 
-  const raw = event.raw || {};
-
-  const confidence = Number(event.confidence ?? raw.confidence ?? 0);
-  const frp = Number(raw.frp ?? 0);
-  const brightTemp = Number(raw.bright_ti4 ?? 0);
-  const persistenceDays = Number(raw.persistence_days ?? 0);
-  const persistenceRatio = Number(raw.persistence_ratio ?? 0);
-  const historicalCount = Number(raw.historical_count ?? 0);
+  const confidence = Number(event.ai_confidence ?? 0);
+  const frp = Number(event.frp ?? 0);
+  const brightTemp = Number(event.brightness_temp ?? 0);
+  const persistenceDays = Number(
+    event.historical_persistence_days ?? 0
+  );
+  const persistenceRatio = Number(event.persistence_ratio ?? 0);
+  const baseline = Number(event.historical_baseline ?? 0);
 
   return (
     <aside className="critical-panel">
 
       <div className="critical-header">
-        <span className="critical-badge">CRITICAL</span>
+        <span className="critical-badge">
+          {event.risk_level === "HIGH" ? "CRITICAL" : "PRIORITY"}
+        </span>
+
         <span>THERMAL EVENT</span>
       </div>
 
       <div className="priority">
-        PRIORITY 01
+        {event.priority}
       </div>
 
       <h2>EVENT TELEMETRY</h2>
 
       <div className="event-id">
-        #{event.id ?? "THERMAL-EVENT"}
+        #{event.event_id}
       </div>
 
       <div className="event-risk">
-        {event.classification}
-      </div>
-
-      <div className="coordinates">
-        {event.latitude !== undefined && event.longitude !== undefined
-          ? `${Number(event.latitude).toFixed(4)}° N • ${Number(
-              event.longitude
-            ).toFixed(4)}° E`
-          : "COORDINATES UNAVAILABLE"}
-      </div>
-
-      <div className="event-time">
-        DATA SOURCE
-        <strong>COLLECTED FIRMS DATA</strong>
+        {event.risk_level} RISK
       </div>
 
       <div className="event-source">
         CLASSIFICATION
         <strong>{event.classification}</strong>
         <span>ML classification result</span>
+      </div>
+
+      <div className="event-time">
+        DATA SOURCE
+        <strong>COLLECTED FIRMS DATA</strong>
       </div>
 
       <div className="metrics">
@@ -113,7 +102,9 @@ function CriticalEvent() {
         <div>
           <span>BRIGHTNESS TEMP</span>
           <strong>
-            {brightTemp > 0 ? `${brightTemp.toFixed(1)} K` : "N/A"}
+            {brightTemp > 0
+              ? `${brightTemp.toFixed(1)} K`
+              : "N/A"}
           </strong>
           <small>VIIRS thermal measurement</small>
         </div>
@@ -121,12 +112,12 @@ function CriticalEvent() {
         <div>
           <span>HISTORICAL PERSISTENCE</span>
           <strong>{persistenceDays.toFixed(1)} days</strong>
-          <small>{historicalCount} historical detections</small>
+          <small>Historical persistence</small>
         </div>
 
         <div>
           <span>PERSISTENCE RATIO</span>
-          <strong>{(persistenceRatio * 100).toFixed(1)}%</strong>
+          <strong>{persistenceRatio.toFixed(1)}%</strong>
           <small>Historical baseline</small>
         </div>
 
@@ -136,13 +127,19 @@ function CriticalEvent() {
 
         <div className="confidence-header">
           <span>AI CONFIDENCE</span>
-          <strong>{(confidence * 100).toFixed(1)}%</strong>
+
+          <strong>
+            {(confidence * 100).toFixed(1)}%
+          </strong>
         </div>
 
         <div className="confidence-bar">
           <div
             style={{
-              width: `${Math.min(100, confidence * 100)}%`,
+              width: `${Math.min(
+                100,
+                Math.max(0, confidence * 100)
+              )}%`,
             }}
           ></div>
         </div>
@@ -172,18 +169,21 @@ function CriticalEvent() {
 
         <div>
           <strong>⌂ INDUSTRIAL PROXIMITY</strong>
+
           <span>
-            {raw.industrial_distance !== undefined
-              ? `${Number(raw.industrial_distance).toFixed(2)} km`
+            {event.industrial_distance !== null &&
+            event.industrial_distance !== undefined
+              ? `${Number(event.industrial_distance).toFixed(2)} km`
               : "N/A"}
           </span>
         </div>
 
         <div>
-          <strong>↗ FRP Z-SCORE</strong>
+          <strong>↗ HISTORICAL BASELINE</strong>
+
           <span>
-            {raw.frp_zscore !== undefined
-              ? Number(raw.frp_zscore).toFixed(2)
+            {baseline > 0
+              ? `${baseline.toFixed(2)} MW`
               : "N/A"}
           </span>
         </div>
@@ -191,6 +191,7 @@ function CriticalEvent() {
       </div>
 
       <div className="action-buttons">
+
         <button className="alert-button">
           NOTIFY NDRF
         </button>
@@ -198,6 +199,7 @@ function CriticalEvent() {
         <button>
           EXPORT SITREP
         </button>
+
       </div>
 
     </aside>

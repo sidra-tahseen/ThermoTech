@@ -55,3 +55,12 @@ export function classLabel(classification) {
 export function isProvisional(modelInfo) {
   return !modelInfo?.trained;
 }
+export async function fetchTrends() {
+  const res = await fetch("/api/trends");
+
+  if (!res.ok) {
+    throw new Error(`Backend returned ${res.status}`);
+  }
+
+  return res.json();
+}

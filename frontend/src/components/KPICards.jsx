@@ -2,26 +2,30 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 function KPICards() {
-  const [data, setData] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios
-      .get("/api/hotspots")
+      .get("/api/statistics")
       .then((response) => {
-        setData(response.data);
+        setStats(response.data);
       })
       .catch((error) => {
-        console.error("Failed to fetch hotspot data:", error);
+        console.error("Failed to fetch statistics:", error);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   }, []);
 
-  const counts = data?.counts || {};
+  const counts = stats?.classification_counts || {};
 
   const cards = [
     {
       label: "TRACKED HOTSPOTS",
-      value: data?.total ?? "—",
-      change: "COLLECTED DATA",
+      value: stats?.total_hotspots ?? "—",
+      change: "COLLECTED FIRMS DATA",
       icon: "◉",
       type: "normal",
     },
@@ -57,9 +61,13 @@ function KPICards() {
             <span>{card.label}</span>
           </div>
 
-          <div className="kpi-value">{card.value}</div>
+          <div className="kpi-value">
+            {loading ? "..." : card.value}
+          </div>
 
-          <div className="kpi-change">{card.change}</div>
+          <div className="kpi-change">
+            {card.change}
+          </div>
         </div>
       ))}
     </section>
