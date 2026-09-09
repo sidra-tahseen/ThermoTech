@@ -67,9 +67,22 @@ def model_info() -> dict:
         return {"model": "rules-v1", "trained": False,
                 "note": "No trained model yet — rule engine in use."}
     meta = json.loads(META_PATH.read_text()) if META_PATH.exists() else {}
+    if meta.get("bootstrap"):
+        # Trained on rule-generated labels. Never present this as a validated
+        # model: no macro_f1 field, and the name says what it is.
+        return {
+            "model": "xgboost-bootstrap",
+            "trained": True,
+            "validated": False,
+            "trained_at": meta.get("trained_at"),
+            "label_source": meta.get("label_source"),
+            "agreement_with_rules": meta.get("agreement_with_rules"),
+            "warning": meta.get("warning"),
+        }
     return {
         "model": "xgboost-1",
         "trained": True,
+        "validated": True,
         "trained_at": meta.get("trained_at"),
         "n_labeled_rows": meta.get("n_labeled_rows"),
         "macro_f1": meta.get("cross_validation", {}).get("macro_f1_mean"),
@@ -104,6 +117,7 @@ def classify(records, explain: bool = True) -> list[dict]:
             for i in range(len(df))
         ]
 
+    model_name = model_info()["model"]
     X = build_features(df)
     proba = model.predict_proba(X)
     pred = proba.argmax(axis=1)
@@ -123,7 +137,7 @@ def classify(records, explain: bool = True) -> list[dict]:
                 },
                 "key_factors": factors[i],
                 "explanation": factors_to_sentence(factors[i], name),
-                "model": "xgboost-1",
+                "model": model_name,
             }
         )
     return results

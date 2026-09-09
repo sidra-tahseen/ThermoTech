@@ -122,6 +122,23 @@ refits on everything and saves:
 It **refuses to train** below 60 labeled rows or 10 per class. That guard is
 deliberate: a number produced under it is not worth putting on a slide.
 
+### 4b. Bootstrap model (provisional — currently in place)
+
+```bash
+python -m thermotech_ml.train --bootstrap
+```
+
+Fits XGBoost on labels produced by the rule engine, so the pipeline has a
+real model artefact, real probabilities and real SHAP values while we wait
+for human labels. It is saved with `"bootstrap": true` and everything
+downstream reports it as `xgboost-bootstrap`, never `xgboost-1`.
+
+**Its score is not accuracy.** The rules generated the training labels, so
+the model can at best learn to agree with the rules — the 0.99 it reports is
+that agreement, and it is close to 1.0 precisely because the exercise is
+circular. Do not put it on a slide. Running the normal path above overwrites
+this model and clears the flag.
+
 ### 5. Predict
 
 ```bash

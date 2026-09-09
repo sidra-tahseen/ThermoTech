@@ -139,7 +139,11 @@ fetch('/api/hotspots').then(r => r.json()).then(payload => {
 
 function showBadge(m) {
   const b = document.getElementById('badge');
-  if (m.trained) {
+  if (m.trained && m.validated === false) {
+    b.className = 'badge provisional';
+    b.innerHTML = 'Bootstrap model — trained on <b>rule labels</b>, not human review. ' +
+      'Not a performance figure.';
+  } else if (m.trained) {
     b.innerHTML = 'Trained model <b>xgboost-1</b>' +
       (m.macro_f1 ? ' · macro F1 ' + m.macro_f1.toFixed(2) : '') +
       (m.n_labeled_rows ? ' · ' + m.n_labeled_rows + ' labelled rows' : '');
